@@ -6,14 +6,27 @@ const GitHubStrategy = require("passport-github2").Strategy;
 const session = require("express-session");
 const cors = require("cors");
 const axios = require("axios");
+const { Queue } = require("bullmq");
+const IORedis = require("ioredis");
 
 const app = express();
-
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 // Database Connection
 console.log("Connecting to MongoDB...");
 mongoose.connect(process.env.MONGO_URI)
   .then(() => console.log("MongoDB Connected"))
   .catch(err => console.error("MongoDB Connection Error:", err));
+
+// Queue Connection
+const redisConnection = new IORedis({
+  host: process.env.REDIS_HOST,
+  port: process.env.REDIS_PORT,
+  password: process.env.REDIS_PASSWORD,
+  maxRetriesPerRequest: null,
+});
+
+const readmeQueue = new Queue("readme-queue", { connection: redisConnection });
 
 // User Setup
 const UserSchema = new mongoose.Schema({
@@ -117,6 +130,20 @@ app.get("/api/repos", async (req, res) => {
     console.error("GitHub API Error:", err.response?.data || err.message);
     res.status(500).json({ error: "Failed to fetch repos" });
   }
+});
+
+// Trigger a manual generation job
+app.post("/api/activate", async (req, res) => {
+  const { repoName } = req.body;
+  
+  console.log(`Queuing job for: ${repoName}`);
+  
+  await readmeQueue.add("generate-readme", {
+    repoName: repoName,
+    user: req.user.username
+  });
+
+  res.json({ message: "Job Queued", status: "processing" });
 });
 
 // Start

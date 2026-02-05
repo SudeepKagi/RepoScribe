@@ -19,6 +19,7 @@ function App() {
       .catch(() => console.log("Not logged in"));
   }, []);
 
+  
   // 2. Function to Fetch Repos
   const fetchRepos = () => {
     setLoading(true);
@@ -28,6 +29,12 @@ function App() {
       })
       .catch(err => console.error("Repo fetch error:", err))
       .finally(() => setLoading(false));
+  };
+
+  const activateRepo = (repoName) => {
+  axios.post('/api/activate', { repoName })
+    .then(() => alert(` processing started for ${repoName}!`))
+    .catch(err => console.error(err));
   };
 
   const login = () => window.location.href = "http://localhost:3000/auth/github";
@@ -78,7 +85,7 @@ function App() {
                   </div>
                   <button 
                     style={{ marginTop: "20px", padding: "8px", width: "100%", background: "#21262d", border: "1px solid #30363d", color: "#c9d1d9", borderRadius: "6px", cursor: "pointer", display: "flex", justifyContent: "center", alignItems: "center", gap: "8px", transition: "0.2s" }}
-                    onClick={() => alert(`Activated for ${repo.name}`)}
+                    onClick={() => activateRepo(repo.name)}
                   >
                     Activate Scribe <ArrowRight size={14} />
                   </button>
