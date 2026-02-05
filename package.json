@@ -11,8 +11,14 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "cors": "^2.8.6",
     "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "express-session": "^1.19.0",
     "groq-sdk": "^0.37.0",
-    "ignore": "^7.0.5"
+    "ignore": "^7.0.5",
+    "mongoose": "^9.1.6",
+    "passport": "^0.7.0",
+    "passport-github2": "^0.1.12"
   }
 }
