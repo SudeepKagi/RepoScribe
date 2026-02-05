@@ -136,16 +136,16 @@ app.get("/api/repos", async (req, res) => {
 app.post("/api/activate", async (req, res) => {
   const { repoName } = req.body;
   
-  console.log(`Queuing job for: ${repoName}`);
+  console.log(`🔔 Queuing job for: ${repoName}`);
   
   await readmeQueue.add("generate-readme", {
     repoName: repoName,
-    user: req.user.username
+    userName: req.user.username,
+    accessToken: req.user.accessToken
   });
 
   res.json({ message: "Job Queued", status: "processing" });
 });
-
 // Start
 app.listen(3000, () => {
   console.log("Server running on http://localhost:3000");
