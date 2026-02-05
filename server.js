@@ -5,6 +5,7 @@ const passport = require("passport");
 const GitHubStrategy = require("passport-github2").Strategy;
 const session = require("express-session");
 const cors = require("cors");
+const axios = require("axios");
 
 const app = express();
 
@@ -18,7 +19,8 @@ mongoose.connect(process.env.MONGO_URI)
 const UserSchema = new mongoose.Schema({
   githubId: String,
   username: String,
-  accessToken: String
+  accessToken: String,
+  avatarUrl: String
 });
 const User = mongoose.model("User", UserSchema);
 
@@ -42,20 +44,25 @@ passport.use(new GitHubStrategy({
     callbackURL: "http://localhost:3000/auth/github/callback"
   },
   async (accessToken, refreshToken, profile, done) => {
-    console.log(" GitHub Login Successful for:", profile.username);
     try {
       let user = await User.findOne({ githubId: profile.id });
+      
+      const photo = profile.photos && profile.photos[0] ? profile.photos[0].value : null;
+
       if (!user) {
-        console.log("Creating new user in DB...");
         user = await new User({
           githubId: profile.id,
           username: profile.username,
-          accessToken: accessToken
+          accessToken: accessToken,
+          avatarUrl: photo
         }).save();
+      } else {
+        user.accessToken = accessToken;
+        user.avatarUrl = photo;
+        await user.save();
       }
       return done(null, user);
     } catch (err) {
-      console.error("DB Error during login:", err);
       return done(err, null);
     }
   }
@@ -68,7 +75,7 @@ app.get("/auth/github/callback",
   passport.authenticate("github", { failureRedirect: "/" }),
   (req, res) => {
     console.log("Redirecting to Dashboard...");
-    res.redirect("/dashboard");
+    res.redirect("http://localhost:5173");
   }
 );
 
@@ -77,6 +84,38 @@ app.get("/dashboard", (req, res) => {
     res.send(`<h1> Phase 2 Complete!</h1><p>Welcome, <b>${req.user.username}</b>.</p><p>You are logged in.</p>`);
   } else {
     res.send(`<h1> Not Logged In</h1><a href="/auth/github">Login with GitHub</a>`);
+  }
+});
+
+
+
+app.get("/api/user", (req, res) => {
+  if (req.isAuthenticated()) {
+    res.json(req.user);
+  } else {
+    res.status(401).json({ message: "Not logged in" });
+  }
+});
+
+app.get("/api/user", (req, res) => {
+  res.json(req.user || null);
+});
+
+// Fetch Repositories from GitHub
+app.get("/api/repos", async (req, res) => {
+  if (!req.isAuthenticated()) return res.status(401).json({ error: "Not logged in" });
+
+  try {
+    const response = await axios.get("https://api.github.com/user/repos?sort=updated&visibility=public", {
+      headers: {
+        Authorization: `token ${req.user.accessToken}`,
+        Accept: "application/vnd.github.v3+json"
+      }
+    });
+    res.json(response.data);
+  } catch (err) {
+    console.error("GitHub API Error:", err.response?.data || err.message);
+    res.status(500).json({ error: "Failed to fetch repos" });
   }
 });
 
