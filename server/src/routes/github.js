@@ -74,4 +74,10 @@ router.post("/deactivate", authMiddleware, async (req, res) => {
   }
 });
 
+// Get active repos
+router.get("/active", authMiddleware, async (req, res) => {
+  const repos = await Repo.find({ userId: req.user.id });
+  res.json(repos);
+});
+
 module.exports = router;
