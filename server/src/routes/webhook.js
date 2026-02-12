@@ -1,5 +1,6 @@
 const router = require("express").Router();
 const Repo = require("../models/Repo");
+const readmeQueue = require("../utils/queue");
 
 router.post("/", async (req, res) => {
   try {
@@ -18,7 +19,12 @@ router.post("/", async (req, res) => {
       return res.json({ message: "Repo not activated" });
     }
 
-    console.log("🔥 Push received for active repo:", repo.fullName);
+    console.log("🔥 Push received, adding job to queue");
+
+    await readmeQueue.add("generate", {
+      repoId: repo.repoId,
+      fullName: repo.fullName,
+    });
 
     // later → queue job here
 
