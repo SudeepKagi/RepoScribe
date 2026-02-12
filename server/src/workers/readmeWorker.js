@@ -1,12 +1,16 @@
 const { Worker } = require("bullmq");
 const connection = require("../config/redis");
+const { generateReadme } = require("../services/aiService");
 
 const worker = new Worker(
   "readme-generation",
   async (job) => {
     console.log("⚙️ Worker processing repo:", job.data.fullName);
 
-    // later we add AI generation here
+    const readme = await generateReadme(job.data.fullName);
+
+    console.log("✅ README generated");
+    console.log(readme);
   },
   { connection },
 );
